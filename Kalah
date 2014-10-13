@@ -1,0 +1,224 @@
+// ConsoleApplication1.cpp : Defines the entry point for the console application.
+//
+
+#include "stdafx.h"
+#include <iostream>
+#include <string>
+#include <math.h>
+#include <time.h>
+using namespace std;
+
+
+/*define player class*/
+class Player {
+public:
+	int house[7]; ///1-6: houses to play with 7: score of the player
+	string playerName;
+
+	///member functions
+
+	void sowSeeds(int houseNum, Player &player) {
+		int numSeed = house[houseNum];
+		house[houseNum] = 0;
+		int finalHouse = (houseNum+numSeed) % 7;
+		bool tf = (finalHouse != 6 && (isEmpty(finalHouse)) && (!player.isEmpty(finalHouse)));
+		for (int i = 1; i <= numSeed; i++) {
+			house[(houseNum+i) % 7]++;
+		}
+		
+		if (tf) {
+			house[6] += (house[finalHouse] + player.getSeedNum(finalHouse));
+			clearSeeds(finalHouse);
+			player.clearSeeds(finalHouse); 
+		}
+	}
+
+	string getName() {
+		return playerName;
+	}
+
+	bool keepsPlaying(int houseNum) {
+		int numSeed = house[houseNum];
+		return houseNum+numSeed == 6;
+	}
+
+	bool isEmpty(int houseNum) {
+		int numSeed = house[houseNum];
+		return numSeed == 0;
+	}
+
+	void addSeeds(int seedNum, int houseNum) {
+		house[houseNum] = seedNum;
+	}
+
+	void clearSeeds(int houseNum) {
+		house[houseNum] = 0;
+	}
+
+	int getSeedNum(int houseNum) {
+		return house[houseNum];
+	}
+
+	bool isDone() {
+		int sum = 0;
+		for (int i = 0; i < 6; i++) {
+			sum += house[i];
+		}
+		return sum == 0;
+	}
+
+	Player(string name) {
+		playerName = name;
+	}
+};
+
+int main() {
+	int play = 1; ///variable controls whether to play the game again 
+	string name1; ///name of the player
+	cout << "\nWhat's your name?" << endl;
+	cin >> name1;
+	///Initialize the player and houses
+	Player player1(name1);
+	for (int i = 0; i < 7; i++) {
+		player1.addSeeds(0,i);
+	}
+	///Initialize the robot to play with
+	Player player2("robot Max");
+	for (int i = 0; i < 7; i++) {
+		player2.addSeeds(0,i);
+	}
+
+	while (play==1){
+	// Randomly allocate 30 seeds
+	int randNum[12];
+	srand(time(NULL));
+
+	for (int i = 0; i < 11; i++) {
+		randNum[i] = rand() % 30;
+	}
+	int sum = 0;
+	for (int i = 0; i < 11; i++) {
+		sum += randNum[i];
+	}
+	for (int i = 0; i < 11; i++) {
+		randNum[i] = 30*randNum[i]/sum;
+		randNum[11] = 30-sum;
+	}
+	int sum2 = 0;
+	for (int i = 0; i < 11; i++) {
+		sum2 += randNum[i];
+	}	
+	randNum[11] = 30-sum2;
+	for (int i = 0; i < 6; i++) {
+		player1.addSeeds(randNum[i],i);
+	}
+	for (int i = 6; i < 12; i++) {
+		player2.addSeeds(randNum[i],i-6);
+	}
+
+	///start the game
+	cout << "The game start, you are playing with " << player2.getName() << "!" << endl;
+	///the play goes first
+	int turn = 1;
+	while (!player1.isDone() && !player2.isDone()) {
+		int h1; ///house number (1-6)
+		///when keep playing is true and it is the player's turn, ask the player for the house number to sow
+		while (turn == 1) {
+			h1 = 0;
+			///display the current status
+			cout << "\nThe following is " << player1.getName() << "'s" << " house and store configuration" << endl;
+			for (int i = 0; i < 6; i++) {
+				cout << "House " << i << ": " << player1.getSeedNum(i) << endl;
+			}
+			cout << "Store" << ": " << player1.getSeedNum(6) << endl << endl;
+			
+			cout << "The following is " << player2.getName() << "'s" << " house and store configuration" << endl;
+			
+			for (int i = 0; i < 6; i++) {
+				cout << "House " << i << ": " << player2.getSeedNum(i) << endl;
+			}
+			cout << "Store" << ": " << player2.getSeedNum(6) << endl << endl;
+			///Asking for the house number
+			cout << player1.getName() << "'s turn." << endl;
+			
+			cout << "What house do you want to sow? (Pick an integer from 0 to 5): ";
+			cin >> h1;
+			cout << endl;
+			while (h1 > 5 || h1 < 0) {
+				cout << "What house do you want to sow? (Pick an integer from 0 to 5): ";
+				cin >> h1;
+				cout << endl;
+			}
+
+			
+			if (player1.keepsPlaying(h1)) {
+				turn = 1;
+			} else {
+				turn = 2;
+			}
+			///sow the seed
+			player1.sowSeeds(h1,player2);
+		}
+		///robot's turn
+		int h2; ///house number (1-6) on robot's side
+		while (turn == 2) {
+			h2 = 0;
+			int best=0;
+			/*robot's strategy: (very simple version, could have more interesting strategies)
+				First check whether can have the last seed in the score house, then set the best=1
+				and get the house number to sow
+				Then, check whether can have the last seed in an empty house where the opposite house
+				has seed. Update the best and house number to sow*/
+			for(int i = 0;i<6;i++)
+			{
+				int numSeed = player2.getSeedNum(i);
+				if (i+numSeed==6){
+					h2 = i;
+					best = 1;}
+			}
+			for(int i = 0;i<6;i++)
+			{
+				int numSeed = player2.getSeedNum(i);
+				if((i+numSeed<6)&&(player2.getSeedNum(i+numSeed)==0)&&(player1.getSeedNum(i+numSeed)!=0))
+				{
+					if(player1.getSeedNum(i+numSeed)+1>best){
+						best = player1.getSeedNum(i+numSeed)+1;
+						h2 = i;
+					}
+				}
+			}
+			
+			if (player2.keepsPlaying(h2)) {
+				turn = 2;
+			} else {
+				turn = 1;
+			}
+			player2.sowSeeds(h2,player1);
+		}
+
+	}
+
+	if (player1.getSeedNum(6) == player2.getSeedNum(6)) {
+		cout << "It's a tie!" << endl;
+	}
+
+	else if (player1.getSeedNum(6) > player2.getSeedNum(6)) {
+		cout << "Congratulations, " << player1.getName() << " wins!" << endl;
+	}
+
+	else {
+		cout << "Game over, " << player2.getName() << " wins!" << endl;
+	}
+	cout <<"Play again? (0: quit, 1: play)"<<endl;
+	cin>>play;
+	cout<<endl;
+	while (play > 1 || play < 0) {
+				cout << "Play again? (0: quit, 1: play)";
+				cin >> play;
+				cout << endl;
+			}
+	}
+
+	return 0;
+}
+
